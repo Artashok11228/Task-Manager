@@ -8,17 +8,17 @@ use League\CommonMark\Extension\TaskList\TaskListExtension;
 
 class TasksController extends Controller
 {
-    public function getAll()
+    public function getAll(Request $request)
     {
-        $all = Task::all()->toArray();
-        return response()->json([$all], 200);
+        $tasks = $request->user()->tasks()->with('status')->get();
+        return response()->json([$tasks], 200);
     }
 
-    public function getOne($id)
+    public function getOne($id, Request $request)
     {
-        $query = Task::query()->Find($id);
-        if ($query) {
-            return response()->json($query);
+        $task = $request->user()->tasks()->with('status')->find($id);
+        if ($task) {
+            return response()->json($task);
         }
         return response()->json([
             'message' => 'Task not found'
@@ -31,8 +31,9 @@ class TasksController extends Controller
             'name' => 'required|string',
             'description' => 'required|string',
             'status' => 'nullable|string',
-            'completed' => 'nullable|boolean',
         ]);
+        $validate['user_id'] = $request->user()->id;
+
 
         if ($validate) {
             $query = Task::query()->create($validate);
@@ -52,25 +53,26 @@ class TasksController extends Controller
 
     public function editTask(Request $request, $id)
     {
+        $task = $request->user()->tasks()->findOrFail($id);
+
         $validate = $request->validate([
             'name' => 'nullable|string',
             'description' => 'nullable|string',
-            'status' => 'nullable|string',
-            'completed' => 'nullable|boolean',
+            'status_id' => 'nullable|string',
         ]);
-        if ($validate) {
-            $query = Task::query()->FindOrFail($id)->update($validate);
-            if ($query) {
-                return response()->json([
-                    'message' => 'Task updated',
-                ]);
-            }
+        $query = $task->update($validate);
+        if ($query) {
             return response()->json([
-                'message' => 'Task not updated , something went wrong',
-            ], 500);
+                'message' => 'Task updated',
+                'data' => Task::query()->findOrFail($id) ?? 'unavalaible data'
+            ]);
+
         }
+        return response()->json(['message' => 'Task not updated , something went wrong'], 500);
+
 
     }
+
 
     public function deleteTask($id)
     {

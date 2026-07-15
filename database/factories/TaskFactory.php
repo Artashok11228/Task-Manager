@@ -20,8 +20,7 @@ class TaskFactory extends Factory
         return [
             'name' => $this->faker->name(),
             'description' => $this->faker->text(),
-            'status' => $this->faker->randomElement(['pending', 'completed', 'cancelled', 'to do', 'hold']),
-            'completed' => $this->faker->randomElement(['0', '1']),
+
         ];
     }
 }
