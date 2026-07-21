@@ -2,7 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\ApiResponse\ApiResponse;
+use App\Http\Requests\editTask;
+use App\Http\Requests\storeTask;
 use App\Models\Task;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use League\CommonMark\Extension\TaskList\TaskListExtension;
 
@@ -11,80 +15,95 @@ class TasksController extends Controller
     public function getAll(Request $request)
     {
         $tasks = $request->user()->tasks()->with('status')->get();
-        return response()->json([$tasks], 200);
+        return ApiResponse::builder()
+            ->withData($tasks)
+            ->withStatus(200)
+            ->build()
+            ->response();
     }
 
     public function getOne($id, Request $request)
     {
         $task = $request->user()->tasks()->with('status')->find($id);
         if ($task) {
-            return response()->json($task);
+            return ApiResponse::builder()
+                ->withData($task)
+                ->withStatus(200)
+                ->build()
+                ->response();
         }
-        return response()->json([
-            'message' => 'Task not found'
-        ], 404);
+        return ApiResponse::builder()
+            ->withMessage("Task not found")
+            ->withStatus(404)
+            ->build()
+            ->response();
     }
 
-    public function addTask(Request $request)
+    public function addTask(storeTask $request)
     {
-        $validate = $request->validate([
-            'name' => 'required|string',
-            'description' => 'required|string',
-            'status' => 'nullable|string',
-        ]);
+        $validate = $request->validated();
         $validate['user_id'] = $request->user()->id;
-
-
         if ($validate) {
             $query = Task::query()->create($validate);
             $result = Task::find($query->id);
             if ($query) {
-                return response()->json([
-                    'message' => 'Task created',
-                    'data' => $result
-                ]);
+                return ApiResponse::builder()
+                    ->withMessage('task created succesfully')
+                    ->withData($result)
+                    ->withStatus(200)
+                    ->build()
+                    ->response();
             }
         }
-        return response()->json([
-            'message' => 'Task not created , something went wrong',
-        ], 500);
-
+        return ApiResponse::builder()
+            ->withMessage("cant create task. something went wrong")
+            ->withStatus(500)
+            ->build()
+            ->response();
     }
 
-    public function editTask(Request $request, $id)
+    public function editTask(storeTask $request, $id)
     {
         $task = $request->user()->tasks()->findOrFail($id);
+        $validate = $request->validated();
 
-        $validate = $request->validate([
-            'name' => 'nullable|string',
-            'description' => 'nullable|string',
-            'status_id' => 'nullable|string',
-        ]);
         $query = $task->update($validate);
         if ($query) {
-            return response()->json([
-                'message' => 'Task updated',
-                'data' => Task::query()->findOrFail($id) ?? 'unavalaible data'
-            ]);
+            $result = Task::query()->findOrFail($id) ?? 'data not avalaible';
 
+            return ApiResponse::builder()
+                ->withMessage('task updated successfully')
+                ->withData($task)
+                ->withStatus(200)
+                ->build()
+                ->response();
         }
-        return response()->json(['message' => 'Task not updated , something went wrong'], 500);
+        return ApiResponse::builder()
+            ->withMessage('cant do that. something went wrong')
+            ->withData($task)
+            ->withStatus(500)
+            ->build()
+            ->response();
 
 
     }
-
 
     public function deleteTask($id)
     {
         $query = Task::query()->Find($id);
         if ($query) {
             $query->delete();
-            return response()->json([
-                'message' => 'Task deleted',
-            ]);
+            return APiResponse::builder()
+                ->withMessage('task deleted successfully')
+                ->withStatus(200)
+                ->build()
+                ->response();
         }
-        return response()->json([
-            'message' => 'Task not found',
-        ]);
+        return ApiResponse::builder()
+            ->withMessage("task not found")
+            ->withStatus(404)
+            ->build()
+            ->response();
+
     }
 }
